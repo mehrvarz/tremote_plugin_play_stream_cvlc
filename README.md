@@ -6,7 +6,7 @@ This repository contains the complete Go source code of a remote control plugin 
 
 TRemote plugin **play_stream_cvlc** implements an internet radio streamer.
 This is useful sample code, demonstrating how things can be implemented in the 
-context of a TRemote plugin. This is also a very useful standalone internet 
-radio streamer. It is reliable and fun to use.
+context of a TRemote plugin. This is also a very useful standalone application 
+that is reliable and fun to use.
 
 
