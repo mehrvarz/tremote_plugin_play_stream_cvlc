@@ -33,13 +33,14 @@ The following entry in "mapping.txt" will bind the radio streaming plugin to a s
 P1, JazzGroove, play_stream|TheJazzGroove.org=http://199.180.75.26:80/stream
 ```
 
-You can also setup a list of radio stations:
+You can also setup a (long) list of radio stations:
 
 ```
 P1, JazzRadio, play_stream|TheJazzGroove.org=http://199.180.75.26:80/stream|UK1940s=http://1940sradio1.co.uk:8100/1|Secklow105.5=http://31.25.191.64:8000/;?t=1528915624|BBC=http://bbcmedia.ic.llnwd.net/stream/bbcmedia_lrberk_mf_p|Radio Swiss Jazz=http://www.radioswissjazz.ch/live/aacp.m3u|Smooth
 ```
 
-When you press the configured button again, these radio stations will get round-robined. A longpress will skip back to the previous station.
+When you press the configured button again, the next radio stations will get played. A longpress will skip one station back.
+You can step through the list of stations round-robin in both directions.
 
 You can also confgure multple buttons to play different sets of radio stations:
 
