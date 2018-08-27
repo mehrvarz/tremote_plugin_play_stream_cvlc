@@ -1,5 +1,5 @@
 /* 
-TRemote plugin play_stream_cvlc implements a internet radio player.
+TRemote plugin play_stream_cvlc implements an internet radio player.
 This is useful sample code, demonstrating how things can be implemented in the 
 context of a TRemote plugin. This is also a very useful standalone internet 
 radio player, that is reliable and fun to use.
