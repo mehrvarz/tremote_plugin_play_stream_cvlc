@@ -4,9 +4,9 @@ TRemote is a service for ARM based Linux computers. It lets you remote control *
 
 This repository contains the complete Go source code of a remote control plugin application. You can use this plugin as-is. You can also use it as a template to implement similar or extended functionality.
 
-TRemote plugin **play_stream_cvlc** implements an internet radio application.
+TRemote plugin **play_stream_cvlc** implements a radio application.
 This is useful sample code, demonstrating how things can be implemented in the 
 context of a TRemote plugin. This is also a very useful standalone application 
-that is reliable and fun to use.
+which is reliable and fun to use.
 
 
