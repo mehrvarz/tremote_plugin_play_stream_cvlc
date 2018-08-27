@@ -42,13 +42,13 @@ P1, JazzRadio, play_stream|TheJazzGroove.org=http://199.180.75.26:80/stream|UK19
 When you press the configured button again, the next radio stations will get played. A longpress will skip one station back.
 You can step through the list of stations round-robin in both directions.
 
-You can also confgure multple buttons to play different sets of radio stations:
+You can also confgure multple buttons for different sets of radio stations:
 
 ```
 P1, JazzRadio, play_stream|TheJazzGroove.org=http://199.180.75.26:80/stream|UK1940s=http://1940sradio1.co.uk:8100/1|Secklow105.5=http://31.25.191.64:8000/;?t=1528915624|BBC=http://bbcmedia.ic.llnwd.net/stream/bbcmedia_lrberk_mf_p|Radio Swiss Jazz=http://www.radioswissjazz.ch/live/aacp.m3u|Smooth
 P2, TalkRadio, play_stream|DLF=http://st01.dlf.de/dlf/01/104/ogg/stream.ogg|DLK=http://st02.dlf.de/dlf/02/104/ogg/stream.ogg|RadioBERLIN 88,8=http://www.radioberlin.de/live.pls|SRF 4 News Swiss=http://stream.srg-ssr.ch/drs4news/mp3_128.m3u
 ```
 
-Note that the plugin knows nothing about remote controls, about Bluetooth or how a button event is delivered to it. It only cares about the implementation of a particular functionality. The mapping file bindes the two sides together.
+Note that a plugin does not know anything about remote controls, about Bluetooth or how a button event is delivered to it. It only cares about the implementation of the response action. The mapping file bindes the two sides together.
 
 
