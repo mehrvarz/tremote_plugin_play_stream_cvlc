@@ -6,8 +6,8 @@ This repository contains the complete Go source code of a remote control plugin 
 
 TRemote plugin **play_stream_cvlc** implements a streaming radio application.
 This is useful sample code, demonstrating how things can be implemented in the 
-context of a TRemote plugin. This is also a very useful standalone application 
-which is reliable and fun to use.
+context of a TRemote plugin. This is also a very useful application 
+that works reliably and is fun to use.
 
 Plugin play_stream_cvlc makes use of cvlc. You may need to install cvlc via "apt install vlc-nox".
 
@@ -21,12 +21,12 @@ After cloning this repository enter the following command to build the plugin:
 ```
 CGO_ENABLED=1 go build -buildmode=plugin
 ```
-This will create the "play_stream_cvlc.so" binary. Copy the binary over to your TremoteHost folder, add a mapping entry like the one shown below to your mapping.txt file and restart the TRemote service. You can now invoke your plugin functionality via a Bluetooh remote control.
+This will create the "play_stream_cvlc.so" binary. Copy the binary over to your Tremote folder, add a mapping entry like the one shown below to your mapping.txt file and restart the TRemote service. You can now invoke your plugin functionality via a Bluetooh remote control.
 
 
 # Button mapping
 
-The following entry in "mapping.txt" will bind the radio streaming plugin to a specific remote control button (P1) and hand over the station name and URL (TheJazzGroove.org=http://199.180.75.26:80/stream):
+The following entry in "mapping.txt" will bind the radio streaming plugin to a specific button (P1) and hand over the station name and URL (TheJazzGroove.org=http://199.180.75.26:80/stream):
 
 
 ```
