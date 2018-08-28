@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"runtime"
 
 	"github.com/mehrvarz/log"
 	"github.com/mehrvarz/tremote_plugin"
@@ -53,7 +54,7 @@ longpress) or false (for shortpress) to have it play the next station, or
 the previous one. We use a Mutex to prevent interruption during the short
 period of time Action() is active.
 */
-func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs *tremote_plugin.RemoteControlSpec, ph tremote_plugin.PluginHelper) error {
+func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs *tremote_plugin.RemoteControlSpec, ph tremote_plugin.PluginHelper, wg *sync.WaitGroup) error {
 	var lock_Mutex sync.Mutex
 	lock_Mutex.Lock()
 	logm = log
@@ -88,7 +89,7 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs 
 				// button is still pressed; this is a longpress; let's take care of it
 				(*ph.PLastPressActionDone)[pid] = true
 				//logm.Debugf("%s pressedDuration==0 pid=%d %d",pluginname,pid,(*ph.PLastPressActionDone)[pid])
-				actioncall(true, strArray, pid, ph)
+				actioncall(true, strArray, pid, ph, wg)
 			}
 		}()
 
@@ -98,7 +99,7 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs 
 			(*ph.PLastPressActionDone)[pid] = true
 			//logm.Debugf("%s short press pid=%d %d",pluginname,pid,(*ph.PLastPressActionDone)[pid])
 			go func() {
-				actioncall(false, strArray, pid, ph)
+				actioncall(false, strArray, pid, ph, wg)
 			}()
 		}
 	}
@@ -107,13 +108,21 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs 
 	return nil
 }
 
-func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.PluginHelper) error {
-	var reterr error
-	var audioStreamName, audioStreamSource string
-	var lock_Mutex sync.Mutex
-	lock_Mutex.Lock()
+func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.PluginHelper, wg *sync.WaitGroup) {
+	wg.Add(1)
+	defer func() {
+		if err := recover(); err != nil {
+			wg.Done()
+ 			logm.Errorf("%s panic=%s", pluginname, err)
+			buf := make([]byte, 1<<16)
+			runtime.Stack(buf, true)
+ 			logm.Errorf("%s stack=\n%s", pluginname, buf)
+	   }
+	}()
 
 	instance := instanceNumber
+	var reterr error
+	var audioStreamName, audioStreamSource string
 
 	if longpress {
 		//logm.Debugf("%s (%d) start long-press",pluginname,instance)
@@ -176,6 +185,7 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 		if *ph.StopAudioPlayerChan != nil {
 			*ph.StopAudioPlayerChan = nil
 		}
+		wg.Done()
 
 	} else {
 		stdout, err := cmd_audio.StdoutPipe()
@@ -264,12 +274,9 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 			errString := reterr.Error()
 			logm.Warningf("%s process.Start err=[%s]", pluginname, errString)
 			ph.PrintInfo("")
+			wg.Done()
 		} else {
 			logm.Debugf("%s (%d) cmd_audio.Start() OK; waiting...", pluginname, instance)
-
-			// attach this process to a WaitGroup
-			var wg sync.WaitGroup
-			wg.Add(1)
 
 			// we now start two threads to cope with abort-requests and cvlc eventually ending
 			// any of the two can trigger first
@@ -291,8 +298,11 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 				} else {
 					logm.Debugf("%s (%d) playback being killed", pluginname, instance)
 					exe_cmd(AudioPlayerKill, false, false, instance)
+					if wg!=nil {
+						wg.Done() // signaling to waitgroup that this process is done
+						wg=nil
+					}
 				}
-				wg.Done() // signaling to waitgroup that this process is done
 			}()
 			go func() {
 				// our 2nd thread is waiting for cvlc to end
@@ -312,13 +322,15 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 				stderr = nil
 				if *ph.StopAudioPlayerChan != nil && *ph.StopAudioPlayerChan == ourStopAudioPlayerChan {
 					*ph.StopAudioPlayerChan <- true
+				} else {
+					if wg!=nil {
+						wg.Done() // signaling to waitgroup that this process is done
+						wg=nil
+					}
 				}
 			}()
 		}
 	}
-
-	lock_Mutex.Unlock()
-	return reterr
 }
 
 func getStreamNameAndSource(entry string) (string, string) {
