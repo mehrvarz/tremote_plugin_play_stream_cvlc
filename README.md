@@ -60,7 +60,7 @@ P1, JazzRadio, play_stream|TheJazzGroove.org=http://199.180.75.26:80/stream|UK19
 P2, TalkRadio, play_stream|DLF=http://st01.dlf.de/dlf/01/104/ogg/stream.ogg|DLK=http://st02.dlf.de/dlf/02/104/ogg/stream.ogg|RadioBERLIN 88,8=http://www.radioberlin.de/live.pls|SRF 4 News Swiss=http://stream.srg-ssr.ch/drs4news/mp3_128.m3u
 ```
 
-Note that a plugin does not know anything about remote controls, about Bluetooth or how a button event is delivered to it. It only takes care of implementing the response action. The mapping file bindes the two sides together.
+Note that a plugin does not know anything about remote controls, about Bluetooth or how a button event is delivered to it. It only takes care of implementing the response action. The mapping file binds the two sides together.
 
 
 
