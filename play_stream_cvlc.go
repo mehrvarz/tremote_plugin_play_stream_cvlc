@@ -386,20 +386,20 @@ func readConfig(path string) int {
 		line := scanner.Text()
 		pound := strings.Index(line, "#")
 		if pound >= 0 {
-			//logm.Infof("readConfig found # at pos %d",pound)
+			//logm.Debugf("readConfig found # at pos %d",pound)
 			line = line[:pound]
 		}
 		if line != "" {
 			line = strings.TrimSpace(line)
 		}
 		if line != "" {
-			//logm.Infof("readConfig line: ["+line+"]")
+			//logm.Debugf("readConfig line: ["+line+"]")
 			linetokens := strings.Split(line, "=")
-			//logm.Infof("readConfig tokens: [%v]",linetokens)
+			//logm.Debugf("readConfig tokens: [%v]",linetokens)
 			if len(linetokens) >= 2 {
 				key := strings.TrimSpace(linetokens[0])
 				value := strings.TrimSpace(linetokens[1])
-				logm.Infof("readConfig key=%s val=%s", key, value)
+				logm.Debugf("readConfig key=%s val=%s", key, value)
 				linecount++
 
 				switch key {
