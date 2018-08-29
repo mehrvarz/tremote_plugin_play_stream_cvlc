@@ -23,9 +23,9 @@ CGO_ENABLED=1 go build -buildmode=plugin play_stream_cvlc.go
 ```
 This will create the "play_stream_cvlc.so" binary. Copy the binary over to your TRemote folder, add a mapping entry like the one shown below to your mapping.txt file and restart the TRemote service. You can now invoke your plugin functionality via a Bluetooh remote control.
 
-If you intend to modify this plugin or create a similar one, you should take a look at the [TRemote plugin base package](https://github.com/mehrvarz/tremote_plugin).
+If you intend to modify this plugin or create a similar one, you should also take a look at the [TRemote plugin base package](https://github.com/mehrvarz/tremote_plugin).
 
-You can use the runtrp tool to run TRemote plugins from the command line. Download for [linux.ARM6](https://github.com/mehrvarz/tremote_plugin/tree/master/bin.linux.ARM6) and for [linux.AMD64](https://github.com/mehrvarz/tremote_plugin/tree/master/bin.linux.AMD64).
+You can use the runtrp tool to run TRemote plugins from the command line. Download for [linux-armv6l](https://github.com/mehrvarz/tremote_plugin/tree/master/bin.linux.ARM6) and for [linux-amd64](https://github.com/mehrvarz/tremote_plugin/tree/master/bin.linux.AMD64).
 
 
 # Button mapping
