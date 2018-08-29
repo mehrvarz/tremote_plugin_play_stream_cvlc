@@ -176,8 +176,9 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 	ph.PrintInfo(html.EscapeString(audioStreamName))
 	startTime := time.Now()
 
+	logm.Infof("%s play stream [%s]", pluginname, audioStreamSource)
 	cmd := AudioPlayer + " \"" + audioStreamSource + "\""
-	logm.Infof("%s exec cmd [%s]", pluginname, cmd)
+	logm.Debugf("%s exec cmd [%s]", pluginname, cmd)
 	cmd_audio := exec.Command("sh", "-c", cmd)
 	if cmd_audio == nil {
 		logm.Warningf("%s cmd_audio==nil after exec.Command()", pluginname)
