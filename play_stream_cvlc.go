@@ -374,32 +374,32 @@ func readConfig(path string) int {
 
 	file, err := os.Open(pathfile)
 	if err != nil {
-		logm.Infof("readConfig from "+pathfile+" failed: %s", err.Error())
+		logm.Infof("%s readConfig from %s failed: %s", pluginname,pathfile,err.Error())
 		return 0 // not fatal, we can do without config.txt
 	}
 	defer file.Close()
 
-	logm.Infof("readConfig from %s", pathfile)
+	logm.Infof("%s readConfig from %s", pluginname, pathfile)
 	linecount := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
 		pound := strings.Index(line, "#")
 		if pound >= 0 {
-			//logm.Debugf("readConfig found # at pos %d",pound)
+			//logm.Debugf("%s readConfig found # at pos %d",pluginname,pound)
 			line = line[:pound]
 		}
 		if line != "" {
 			line = strings.TrimSpace(line)
 		}
 		if line != "" {
-			//logm.Debugf("readConfig line: ["+line+"]")
+			//logm.Debugf("%s readConfig line: [%s]",pluginname,line)
 			linetokens := strings.Split(line, "=")
-			//logm.Debugf("readConfig tokens: [%v]",linetokens)
+			//logm.Debugf("%s readConfig tokens: [%v]",pluginname,linetokens)
 			if len(linetokens) >= 2 {
 				key := strings.TrimSpace(linetokens[0])
 				value := strings.TrimSpace(linetokens[1])
-				logm.Debugf("readConfig key=%s val=%s", key, value)
+				logm.Debugf("%s readConfig key=%s val=%s", pluginname, key, value)
 				linecount++
 
 				switch key {
