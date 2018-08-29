@@ -9,7 +9,7 @@ This is useful sample code, demonstrating how things can be implemented in the
 context of a TRemote plugin. This is also a very useful application 
 that works reliably and is fun to use.
 
-Plugin play_stream_cvlc makes use of cvlc. You may need to install cvlc via "apt install vlc-nox".
+This plugin makes use of cvlc. You may need to install cvlc via "apt install vlc-nox".
 
 
 # Building the plugin
@@ -22,6 +22,8 @@ After cloning this repository enter the following command to build the plugin:
 CGO_ENABLED=1 go build -buildmode=plugin play_stream_cvlc.go
 ```
 This will create the "play_stream_cvlc.so" binary. Copy the binary over to your Tremote folder, add a mapping entry like the one shown below to your mapping.txt file and restart the TRemote service. You can now invoke your plugin functionality via a Bluetooh remote control.
+
+If you intend to modify this plugin or create a similar one, you should take a look at the [TRemote plugin base package](https://github.com/mehrvarz/tremote_plugin).
 
 
 # Button mapping
