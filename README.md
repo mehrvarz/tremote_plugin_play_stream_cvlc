@@ -27,6 +27,12 @@ If you intend to modify this plugin or create a similar one, you should also tak
 
 You can use the runtrp tool to run TRemote plugins from the command line. Download runtrp for [linux-armv6l](https://github.com/mehrvarz/tremote_plugin/tree/master/bin.linux.ARM6) and for [linux-amd64](https://github.com/mehrvarz/tremote_plugin/tree/master/bin.linux.AMD64).
 
+For instance you can run this plugin with following command and it will play some Jazz:
+
+```
+runtrp play_stream_cvlc.so "TheJazzGroove.org=http://199.180.75.26:80/stream"
+```
+
 
 # Button mapping
 
@@ -37,22 +43,24 @@ The following entry in "mapping.txt" will bind the radio streaming plugin to a s
 P1, JazzGroove, play_stream|TheJazzGroove.org=http://199.180.75.26:80/stream
 ```
 
-You can also setup a (long) list of radio stations:
+Note that you don't need to enter the full plugin name. The beginning part ("play_stream") is sufficient.
+
+You can also setup a list of radio stations:
 
 ```
 P1, JazzRadio, play_stream|TheJazzGroove.org=http://199.180.75.26:80/stream|UK1940s=http://1940sradio1.co.uk:8100/1|Secklow105.5=http://31.25.191.64:8000/;?t=1528915624|BBC=http://bbcmedia.ic.llnwd.net/stream/bbcmedia_lrberk_mf_p|Radio Swiss Jazz=http://www.radioswissjazz.ch/live/aacp.m3u|Smooth
 ```
 
-When you press the configured button again, the next radio stations will get played. A longpress will skip one station back.
-You can step through the list of stations round-robin in both directions.
+When you press the specified button (P1) again, the plugin will skip to the next radio station. A longpress will skip one station back. You can step through the list of stations round-robin in both directions with just one button.
 
-You can also confgure multple buttons for different sets of radio stations:
+You can also confgure multiple buttons for different sets of radio stations:
 
 ```
 P1, JazzRadio, play_stream|TheJazzGroove.org=http://199.180.75.26:80/stream|UK1940s=http://1940sradio1.co.uk:8100/1|Secklow105.5=http://31.25.191.64:8000/;?t=1528915624|BBC=http://bbcmedia.ic.llnwd.net/stream/bbcmedia_lrberk_mf_p|Radio Swiss Jazz=http://www.radioswissjazz.ch/live/aacp.m3u|Smooth
 P2, TalkRadio, play_stream|DLF=http://st01.dlf.de/dlf/01/104/ogg/stream.ogg|DLK=http://st02.dlf.de/dlf/02/104/ogg/stream.ogg|RadioBERLIN 88,8=http://www.radioberlin.de/live.pls|SRF 4 News Swiss=http://stream.srg-ssr.ch/drs4news/mp3_128.m3u
 ```
 
-Note that a plugin does not know anything about remote controls, about Bluetooth or how a button event is delivered to it. It only cares about the implementation of the response action. The mapping file bindes the two sides together.
+Note that a plugin does not know anything about remote controls, about Bluetooth or how a button event is delivered to it. It only takes care of implementing the response action. The mapping file bindes the two sides together.
+
 
 
