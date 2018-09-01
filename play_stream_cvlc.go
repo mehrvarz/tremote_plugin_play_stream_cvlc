@@ -33,6 +33,7 @@ var (
 	instanceNumber int
 	argIndex       = -1
 	lock_Mutex     sync.Mutex
+	waitingForOlderInstanceToStop = false
 
 	pluginname      = "play_stream_cvlc"
 	AudioControl    = "amixer set Master -q"
@@ -59,6 +60,13 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs 
 	lock_Mutex.Lock()
 	logm = log
 
+	if instanceNumber == 0 {
+		// may do things here only on 1st run
+		// read config.txt for AudioControl, AudioPlayer, AudioPlayerKill
+		readConfig("")
+	}
+	instanceNumber++
+
 	strArray := rcs.StrArray
 	if longpress {
 		strArray = rcs.StrArraylong
@@ -70,14 +78,6 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs 
 		argIndex = len(strArray) - 1
 	}
 	*ph.PIdLastPressed = pid
-
-	//logm.Debugf("%s instanceNumber=%d",pluginname,instanceNumber)
-	if instanceNumber == 0 {
-		// may run something here only on very 1st run
-		// read config.txt for AudioControl, AudioPlayer, AudioPlayerKill
-		readConfig("")
-	}
-	instanceNumber++
 
 	if pressedDuration == 0 {
 		// button just pressed, is not yet released
@@ -109,6 +109,9 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs 
 }
 
 func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.PluginHelper, wg *sync.WaitGroup) {
+	var lock_Mutex	sync.Mutex
+	lock_Mutex.Lock()
+
 	wg.Add(1)
 	defer func() {
 		if err := recover(); err != nil {
@@ -121,7 +124,6 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 	}()
 
 	instance := instanceNumber
-	var reterr error
 	var audioStreamName, audioStreamSource string
 
 	if longpress {
@@ -143,35 +145,36 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 		logm.Infof("%s short-press audioStreamName=%s", pluginname, audioStreamName)
 	}
 
-	if *ph.PluginIsActive {
-		// player is already running
-		logm.Debugf("%s (%d) on start another instance already running", pluginname, instance)
-		// stop older instance
-		if *ph.StopAudioPlayerChan != nil {
-			logm.Debugf("%s (%d) kill other instance...", pluginname, instance)
-			*ph.StopAudioPlayerChan <- true
-			// wait for other instance to exec AudioPlayerKill (so it won't kill our new vlc instance) and terminate
-			time.Sleep(200 * time.Millisecond)
-		} else {
-			logm.Warningf("%s (%d) no StopAudioPlayerChan exist to kill other instance", pluginname, instance)
-		}
+	if waitingForOlderInstanceToStop {
+		// an older instance of this plugin is already waiting for an even older instance to stop (!)
+		// we likely have too many overlapping actioncall() instances: giving up on this new instance
+		logm.Warningf("%s (%d) exit on waitingForOlderInstanceToStop",pluginname,instance)
+		lock_Mutex.Unlock()
+		return
+	}
+
+	if *ph.StopAudioPlayerChan!=nil {
+		waitingForOlderInstanceToStop = true
+		logm.Debugf("%s (%d) stopping other instance...",pluginname,instance)
+		*ph.StopAudioPlayerChan <- true
+		time.Sleep(200 * time.Millisecond)
 	} else {
-		// no instance of our player is currently running so we don't know if any audio playback is ongoing
-		// stop whatever audio may currently be playing
-		logm.Debugf("%s (%d) on start no PluginIsActive -> StopCurrentAudioPlayback()", pluginname, instance)
+		// No instance of our player is currently active. There may be some other audio playing instance.
+		// Stop whatever audio player may currently be active.
+		waitingForOlderInstanceToStop = true
+		logm.Debugf("%s (%d) on start no audio Plugin active -> StopCurrentAudioPlayback()",pluginname,instance)
 		ph.StopCurrentAudioPlayback()
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	// we are running now
-	logm.Debugf("%s (%d) set PluginIsActive", pluginname, instance)
 	var ourStopAudioPlayerChan chan bool
 	if *ph.StopAudioPlayerChan == nil {
 		// this allows parent to stop playback
 		ourStopAudioPlayerChan = make(chan bool)
 		*ph.StopAudioPlayerChan = ourStopAudioPlayerChan
 	}
-	*ph.PluginIsActive = true
+	waitingForOlderInstanceToStop = false
+	lock_Mutex.Unlock()
 
 	ph.PrintInfo(html.EscapeString(audioStreamName))
 	startTime := time.Now()
@@ -182,7 +185,6 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 	cmd_audio := exec.Command("sh", "-c", cmd)
 	if cmd_audio == nil {
 		logm.Warningf("%s cmd_audio==nil after exec.Command()", pluginname)
-		*ph.PluginIsActive = false
 		if *ph.StopAudioPlayerChan != nil {
 			*ph.StopAudioPlayerChan = nil
 		}
@@ -263,69 +265,71 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 			}()
 		}
 
-		reterr = cmd_audio.Start() // will return immediately
-		if reterr != nil {
+		err = cmd_audio.Start() // will return immediately
+		if err != nil {
 			// process didn't start
 			logm.Warningf("%s cmd_audio.Start() didn't start", pluginname)
 			cmd_audio = nil // must stop stdout/stderr threads
-			*ph.PluginIsActive = false
 			if *ph.StopAudioPlayerChan != nil {
 				*ph.StopAudioPlayerChan = nil
 			}
-			errString := reterr.Error()
-			logm.Warningf("%s process.Start err=[%s]", pluginname, errString)
+			logm.Warningf("%s process.Start err=[%s]", pluginname, err.Error())
 			ph.PrintInfo("")
 			wg.Done()
 		} else {
 			logm.Debugf("%s (%d) cmd_audio.Start() OK; waiting...", pluginname, instance)
 
-			// we now start two threads to cope with abort-requests and cvlc eventually ending
+			// we now start two goroutine to cope with stop-requests and cvlc eventually ending
 			// any of the two can trigger first
 			go func() {
-				// our 1st thread is waiting for a stop event
+				// our 1st goroutine is waiting for a stop event
 
+				// mute may be on; turn in off to be sure;  
 				time.Sleep(500 * time.Millisecond)
 				audioVolumeUnmute(instance)
 
+				// wait for a stop-request
 				<-*ph.StopAudioPlayerChan
-				// received stop event either from: new instance, cvlc has just ended, or event was sent from outside
+				// received stop-request either from: new instance, cvlc has just ended, or event was sent from outside
 
 				if *ph.StopAudioPlayerChan != nil && *ph.StopAudioPlayerChan == ourStopAudioPlayerChan {
 					*ph.StopAudioPlayerChan = nil
-					*ph.PluginIsActive = false
 				}
 				if cmd_audio == nil {
 					logm.Debugf("%s (%d) playback has finish", pluginname, instance)
 				} else {
 					logm.Debugf("%s (%d) playback being killed", pluginname, instance)
+					// this will activate our 2nd goroutine
 					exe_cmd(AudioPlayerKill, false, false, instance)
 					if wg!=nil {
-						wg.Done() // signaling to waitgroup that this process is done
+						wg.Done() // this process is done
 						wg=nil
 					}
 				}
 			}()
 			go func() {
-				// our 2nd thread is waiting for cvlc to end
+				// our 2nd goroutine is waiting for cvlc to end
 				// cvlc running...
-				reterr = cmd_audio.Wait()
+				err := cmd_audio.Wait()
 				// cvlc has ended
 
 				errString := "-"
-				if reterr != nil {
-					errString = reterr.Error()
+				if err != nil {
+					errString = err.Error()
 				}
 				durationMS := time.Now().Sub(startTime) / time.Millisecond
 				// if durationMS <200:  possibly cvlc not installed?
 				logm.Debugf("%s (%d) cmd_audio.Wait() ended after %d ms %s", pluginname, instance, durationMS, errString)
+
 				cmd_audio = nil
 				stdout = nil
 				stderr = nil
 				if *ph.StopAudioPlayerChan != nil && *ph.StopAudioPlayerChan == ourStopAudioPlayerChan {
+					// stop our other goroutine (in case we still own the channel); the other goroutine will decr waitgroup
 					*ph.StopAudioPlayerChan <- true
 				} else {
 					if wg!=nil {
-						wg.Done() // signaling to waitgroup that this process is done
+						wg.Done() // this process is done
 						wg=nil
 					}
 				}
