@@ -79,13 +79,13 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs 
 	}
 	*ph.PIdLastPressed = pid
 
-	if pressedDuration == 0 {
+	if pressedDuration==0 && !longpress {
 		// button just pressed, is not yet released
 		//logm.Debugf("%s pressedDuration==0 pid=%d %d",pluginname,pid,(*ph.PLastPressActionDone)[pid])
 		go func() {
 			// let's see if button is still pressed after LongPressDelay MS
 			time.Sleep(tremote_plugin.LongPressDelay * time.Millisecond)
-			if (*ph.PLastPressedMS)[pid] > 0 {
+			if (*ph.PLastPressedMS)[pid] > 0 && !(*ph.PLastPressActionDone)[pid] {
 				// button is still pressed; this is a longpress; let's take care of it
 				(*ph.PLastPressActionDone)[pid] = true
 				//logm.Debugf("%s pressedDuration==0 pid=%d %d",pluginname,pid,(*ph.PLastPressActionDone)[pid])
@@ -95,7 +95,9 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs 
 
 	} else {
 		// button has been released -> short press
-		if !(*ph.PLastPressActionDone)[pid] {
+		if (*ph.PLastPressActionDone)[pid] {
+			// this button event has already been taken care of
+		} else {
 			(*ph.PLastPressActionDone)[pid] = true
 			//logm.Debugf("%s short press pid=%d %d",pluginname,pid,(*ph.PLastPressActionDone)[pid])
 			go func() {
