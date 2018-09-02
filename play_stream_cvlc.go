@@ -16,7 +16,6 @@ package main
 
 import (
 	"bufio"
-	"html"
 	"os"
 	"os/exec"
 	"strings"
@@ -178,7 +177,7 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 	waitingForOlderInstanceToStop = false
 	lock_Mutex.Unlock()
 
-	ph.PrintInfo(html.EscapeString(audioStreamName))
+	ph.PrintInfo(audioStreamName)
 	startTime := time.Now()
 
 	logm.Infof("%s play stream [%s]", pluginname, audioStreamSource)
