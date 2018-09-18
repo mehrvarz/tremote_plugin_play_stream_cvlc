@@ -15,6 +15,7 @@ mapping.txt file and are handed over by TRemote service via rcs.StrArray.
 package main
 
 import (
+	"fmt"
 	"bufio"
 	"os"
 	"os/exec"
@@ -177,7 +178,7 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 	waitingForOlderInstanceToStop = false
 	lock_Mutex.Unlock()
 
-	ph.PrintInfo(audioStreamName)
+	ph.PrintInfo(fmt.Sprintf("%s %d/%d",audioStreamName,argIndex+1,len(strArray)))
 	startTime := time.Now()
 
 	logm.Infof("%s play stream [%s]", pluginname, audioStreamSource)
@@ -400,12 +401,12 @@ func readConfig(path string) int {
 		}
 		if line != "" {
 			//logm.Debugf("%s readConfig line: [%s]",pluginname,line)
-			linetokens := strings.Split(line, "=")
+			linetokens := strings.SplitN(line, "=", 2)
 			//logm.Debugf("%s readConfig tokens: [%v]",pluginname,linetokens)
 			if len(linetokens) >= 2 {
 				key := strings.TrimSpace(linetokens[0])
 				value := strings.TrimSpace(linetokens[1])
-				logm.Debugf("%s readConfig key=%s val=%s", pluginname, key, value)
+				logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
 				linecount++
 
 				switch key {
