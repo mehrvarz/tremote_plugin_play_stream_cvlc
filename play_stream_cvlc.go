@@ -55,7 +55,7 @@ longpress) or false (for shortpress) to have it play the next station, or
 the previous one. We use a Mutex to prevent interruption during the short
 period of time Action() is active.
 */
-func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs *tremote_plugin.RemoteControlSpec, ph tremote_plugin.PluginHelper, wg *sync.WaitGroup) error {
+func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, homedir string, rcs *tremote_plugin.RemoteControlSpec, ph tremote_plugin.PluginHelper, wg *sync.WaitGroup) error {
 	var lock_Mutex sync.Mutex
 	lock_Mutex.Lock()
 	logm = log
@@ -63,7 +63,7 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, rcs 
 	if instanceNumber == 0 {
 		// may do things here only on 1st run
 		// read config.txt for AudioControl, AudioPlayer, AudioPlayerKill
-		readConfig("")
+		readConfig(homedir)
 	}
 	instanceNumber++
 
@@ -406,15 +406,18 @@ func readConfig(path string) int {
 			if len(linetokens) >= 2 {
 				key := strings.TrimSpace(linetokens[0])
 				value := strings.TrimSpace(linetokens[1])
-				logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
+				//logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
 				linecount++
 
 				switch key {
 				case "audiocontrol":
+					logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
 					AudioControl = value
 				case "audioplayer":
+					logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
 					AudioPlayer = value
 				case "audioplayerkill":
+					logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
 					AudioPlayerKill = value
 				}
 			}
