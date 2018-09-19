@@ -36,9 +36,7 @@ var (
 	waitingForOlderInstanceToStop = false
 
 	pluginname      = "play_stream_cvlc"
-	AudioControl    = "amixer set Master -q"
 	AudioPlayer     = "cvlc --play-and-exit"
-	AudioPlayerKill = "pkill -TERM vlc"
 )
 
 func init() {
@@ -62,8 +60,12 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, home
 
 	if instanceNumber == 0 {
 		// may do things here only on 1st run
-		// read config.txt for AudioControl, AudioPlayer, AudioPlayerKill
+		// read config.txt for AudioPlayer
 		readConfig(homedir)
+
+		//just testing the new ph.HostCmd()
+		//strerr := ph.HostCmd("Shell_command", "df -h")
+		//logm.Debugf("%s HostCmd ret=%s",strerr)
 	}
 	instanceNumber++
 
@@ -128,6 +130,14 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 	instance := instanceNumber
 	var audioStreamName, audioStreamSource string
 
+	if waitingForOlderInstanceToStop {
+		// an older instance of this plugin is already waiting for an even older instance to stop (!)
+		// we likely have too many overlapping actioncall() instances: giving up on this new instance
+		logm.Warningf("%s (%d) exit on waitingForOlderInstanceToStop",pluginname,instance)
+		lock_Mutex.Unlock()
+		return
+	}
+
 	if longpress {
 		//logm.Debugf("%s (%d) start long-press",pluginname,instance)
 		argIndex--
@@ -147,13 +157,7 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 		logm.Infof("%s short-press audioStreamName=%s", pluginname, audioStreamName)
 	}
 
-	if waitingForOlderInstanceToStop {
-		// an older instance of this plugin is already waiting for an even older instance to stop (!)
-		// we likely have too many overlapping actioncall() instances: giving up on this new instance
-		logm.Warningf("%s (%d) exit on waitingForOlderInstanceToStop",pluginname,instance)
-		lock_Mutex.Unlock()
-		return
-	}
+	my_argIndex := argIndex
 
 	if *ph.StopAudioPlayerChan!=nil {
 		waitingForOlderInstanceToStop = true
@@ -178,7 +182,7 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 	waitingForOlderInstanceToStop = false
 	lock_Mutex.Unlock()
 
-	ph.PrintInfo(fmt.Sprintf("%s %d/%d",audioStreamName,argIndex+1,len(strArray)))
+	ph.PrintInfo(fmt.Sprintf("%s %d/%d",audioStreamName,my_argIndex+1,len(strArray)))
 	startTime := time.Now()
 
 	logm.Infof("%s play stream [%s]", pluginname, audioStreamSource)
@@ -288,7 +292,8 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 
 				// mute may be on; turn in off to be sure;  
 				time.Sleep(500 * time.Millisecond)
-				audioVolumeUnmute(instance)
+				//audioVolumeUnmute(instance)
+				ph.HostCmd("AudioVolumeUnmute","")
 
 				// wait for a stop-request
 				<-*ph.StopAudioPlayerChan
@@ -302,7 +307,7 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 				} else {
 					logm.Debugf("%s (%d) playback being killed", pluginname, instance)
 					// this will activate our 2nd goroutine
-					exe_cmd(AudioPlayerKill, false, false, instance)
+					ph.StopCurrentAudioPlayback()
 					if wg!=nil {
 						wg.Done() // this process is done
 						wg=nil
@@ -352,27 +357,6 @@ func getStreamNameAndSource(entry string) (string, string) {
 	return audioStreamName, audioStreamSource
 }
 
-func audioVolumeUnmute(instance int) error {
-	logm.Debugf("%s (%d) audioVolumeUnmute()", pluginname, instance)
-	return exe_cmd(AudioControl+" on", true, false, instance)
-}
-
-func exe_cmd(cmd string, logErr bool, logStdout bool, instance int) error {
-	logm.Debugf("%s (%d) exe_cmd: sh [%s]", pluginname, instance, cmd)
-	out, err := exec.Command("sh", "-c", cmd).Output()
-	if err != nil && logErr {
-		// not fatal
-		logm.Warningf("%s (%d) exe_cmd [%s] err=%s", pluginname, instance, cmd, err.Error())
-	}
-
-	if out != nil && logStdout {
-		if len(out) > 0 {
-			logm.Infof("%s (%d) exe_cmd out=[%s]", pluginname, instance, out)
-		}
-	}
-	return err
-}
-
 func readConfig(path string) int {
 	pathfile := "config.txt"
 	if len(path) > 0 {
@@ -406,19 +390,12 @@ func readConfig(path string) int {
 			if len(linetokens) >= 2 {
 				key := strings.TrimSpace(linetokens[0])
 				value := strings.TrimSpace(linetokens[1])
-				//logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
 				linecount++
 
 				switch key {
-				case "audiocontrol":
-					logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
-					AudioControl = value
 				case "audioplayer":
 					logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
 					AudioPlayer = value
-				case "audioplayerkill":
-					logm.Debugf("%s readConfig key=[%s] val=[%s]", pluginname, key, value)
-					AudioPlayerKill = value
 				}
 			}
 		}
