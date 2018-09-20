@@ -65,7 +65,7 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, home
 	}
 	instanceNumber++
 
-	ph.HostCmd("Screen_On","")
+	ph.HostCmd("ScreenPower","on")
 
 	strArray := rcs.StrArray
 	if longpress {
@@ -290,8 +290,7 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 
 				// mute may be on; turn in off to be sure;  
 				time.Sleep(500 * time.Millisecond)
-				//audioVolumeUnmute(instance)
-				ph.HostCmd("AudioVolumeUnmute","")
+				ph.HostCmd("AudioMute","off")
 
 				// wait for a stop-request
 				<-*ph.StopAudioPlayerChan
