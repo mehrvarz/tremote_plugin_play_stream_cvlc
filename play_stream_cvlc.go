@@ -62,19 +62,17 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, home
 		// may do things here only on 1st run
 		// read config.txt for AudioPlayer
 		readConfig(homedir)
-
-		//just testing the new ph.HostCmd()
-		//strerr := ph.HostCmd("Shell_command", "df -h")
-		//logm.Debugf("%s HostCmd ret=%s",strerr)
 	}
 	instanceNumber++
+
+	ph.HostCmd("Screen_On","")
 
 	strArray := rcs.StrArray
 	if longpress {
 		strArray = rcs.StrArraylong
 	}
 
-	//logm.Debugf("%s pid=%d PIdLastPressed=%d",pluginname,pid,*ph.PIdLastPressed)
+	logm.Debugf("%s pid=%d PIdLastPressed=%d",pluginname,pid,*ph.PIdLastPressed)
 	if pid != *ph.PIdLastPressed {
 		// this button is different than the previous button: start with the first strArray element
 		argIndex = len(strArray) - 1
@@ -370,7 +368,7 @@ func readConfig(path string) int {
 	}
 	defer file.Close()
 
-	logm.Infof("%s readConfig from %s", pluginname, pathfile)
+	logm.Debugf("%s readConfig from %s", pluginname, pathfile)
 	linecount := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
