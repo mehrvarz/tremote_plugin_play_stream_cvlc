@@ -298,13 +298,14 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 
 				if *ph.StopAudioPlayerChan != nil && *ph.StopAudioPlayerChan == ourStopAudioPlayerChan {
 					*ph.StopAudioPlayerChan = nil
+					ourStopAudioPlayerChan = nil
 				}
 				if cmd_audio == nil {
 					logm.Debugf("%s (%d) playback has finish", pluginname, instance)
 					//ph.PrintInfo("")
 				} else {
 					logm.Debugf("%s (%d) playback being killed", pluginname, instance)
-					// this will wake (and end) our 2nd goroutine
+					// this will wake our 2nd goroutine by killing the cvlc process
 					ph.StopCurrentAudioPlayback()
 				}
 				if wg!=nil {
@@ -320,7 +321,11 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 				// cvlc running...
 				err := cmd_audio.Wait()
 				// cvlc has ended
-				ph.PrintInfo("")
+				if ourStopAudioPlayerChan!=nil {
+					// TODO: avoid; this may be an old instance, removing info of new instance
+					// we have not been killed by a newer instance; the audio stream just finished by itself
+					ph.PrintInfo("")
+				}
 
 				errString := "-"
 				if err != nil {
