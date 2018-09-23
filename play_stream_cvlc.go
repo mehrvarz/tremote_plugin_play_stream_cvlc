@@ -210,11 +210,11 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 				outputReader := bufio.NewReader(stdout)
 				for {
 					if cmd_audio == nil {
-						logm.Debugf("%s cmd_audio ended", pluginname)
+						logm.Debugf("%s outputReader cmd_audio ended", pluginname)
 						break
 					}
 					if stdout == nil || outputReader == nil {
-						logm.Debugf("%s cmd_audio stdout closed", pluginname)
+						logm.Debugf("%s outputReader cmd_audio stdout closed", pluginname)
 						break
 					}
 					outputStr, err := outputReader.ReadString('\n')
@@ -301,14 +301,18 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 				}
 				if cmd_audio == nil {
 					logm.Debugf("%s (%d) playback has finish", pluginname, instance)
+					//ph.PrintInfo("")
 				} else {
 					logm.Debugf("%s (%d) playback being killed", pluginname, instance)
-					// this will activate our 2nd goroutine
+					// this will wake (and end) our 2nd goroutine
 					ph.StopCurrentAudioPlayback()
-					if wg!=nil {
-						wg.Done() // this process is done
-						wg=nil
-					}
+				}
+				if wg!=nil {
+					logm.Debugf("%s (%d) wg.Done()", pluginname, instance)
+					wg.Done() // this process is done
+					wg=nil
+				} else {
+					logm.Debugf("%s (%d) wg==nil", pluginname, instance)
 				}
 			}()
 			go func() {
@@ -316,6 +320,7 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 				// cvlc running...
 				err := cmd_audio.Wait()
 				// cvlc has ended
+				ph.PrintInfo("")
 
 				errString := "-"
 				if err != nil {
@@ -329,12 +334,16 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 				stdout = nil
 				stderr = nil
 				if *ph.StopAudioPlayerChan != nil && *ph.StopAudioPlayerChan == ourStopAudioPlayerChan {
-					// stop our other goroutine (in case we still own the channel); the other goroutine will decr waitgroup
+					// stop our other goroutine (in case we still own the channel)
 					*ph.StopAudioPlayerChan <- true
+					// the other goroutine will decr waitgroup
 				} else {
 					if wg!=nil {
+						logm.Debugf("%s (%d) goroutine2 wg.Done()", pluginname, instance)
 						wg.Done() // this process is done
 						wg=nil
+					} else {
+						logm.Debugf("%s (%d) goroutine2 wg==nil", pluginname, instance)
 					}
 				}
 			}()
