@@ -29,14 +29,16 @@ import (
 )
 
 var (
-	logm           log.Logger
-	instanceNumber int
-	argIndex       = -1
-	lock_Mutex     sync.Mutex
+	logm               log.Logger
+	instanceNumber     int
+	lock_Mutex         sync.Mutex
 	waitingForOlderInstanceToStop = false
+	argIndex           = -1
+	audioStreamName    string
+	audioStreamSource  string
 
-	pluginname      = "play_stream_cvlc"
-	AudioPlayer     = "cvlc --play-and-exit"
+	pluginname         = "play_stream_cvlc"
+	AudioPlayer        = "cvlc --play-and-exit"
 )
 
 func init() {
@@ -83,10 +85,25 @@ func Action(log log.Logger, pid int, longpress bool, pressedDuration int64, home
 		// button just pressed, is not yet released
 		//logm.Debugf("%s pressedDuration==0 pid=%d %d",pluginname,pid,(*ph.PLastPressActionDone)[pid])
 		go func() {
-			// let's see if button is still pressed after LongPressDelay MS
-			time.Sleep(tremote_plugin.LongPressDelay * time.Millisecond)
+			// let's see if this becomes a longpress if pressed for tremote_plugin.LongPressDelay ms
+			var msWaited time.Duration = 0
+			for msWaited < tremote_plugin.LongPressDelay {
+				time.Sleep(50 * time.Millisecond)
+				msWaited += 50
+				if (*ph.PLastPressActionDone)[pid] {
+					// button has been taken care of
+					break
+				}
+				if (*ph.PLastPressedMS)[pid] == 0 {
+					// button is no longer pressed
+					break
+				}
+				// button still pressed
+			}
+			// time is up or button released or button taken care of
+
 			if (*ph.PLastPressedMS)[pid] > 0 && !(*ph.PLastPressActionDone)[pid] {
-				// button is still pressed; this is a longpress; let's take care of it
+				// button is still pressed; os this is a longpress; let's take care of it
 				(*ph.PLastPressActionDone)[pid] = true
 				//logm.Debugf("%s pressedDuration==0 pid=%d %d",pluginname,pid,(*ph.PLastPressActionDone)[pid])
 				actioncall(true, strArray, pid, ph, wg)
@@ -126,15 +143,6 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 	}()
 
 	instance := instanceNumber
-	var audioStreamName, audioStreamSource string
-
-	if waitingForOlderInstanceToStop {
-		// an older instance of this plugin is already waiting for an even older instance to stop (!)
-		// we likely have too many overlapping actioncall() instances: giving up on this new instance
-		logm.Warningf("%s (%d) exit on waitingForOlderInstanceToStop",pluginname,instance)
-		lock_Mutex.Unlock()
-		return
-	}
 
 	if longpress {
 		//logm.Debugf("%s (%d) start long-press",pluginname,instance)
@@ -143,7 +151,7 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 			argIndex = len(strArray) - 1
 		}
 		audioStreamName, audioStreamSource = getStreamNameAndSource(strArray[argIndex])
-		logm.Infof("%s long-press audioStreamName=%s", pluginname, audioStreamName)
+		logm.Infof("%s (%d) long-press audioStreamName=%s argIndex=%d", pluginname, instance, audioStreamName, argIndex)
 	} else {
 		// short press
 		//logm.Debugf("%s (%d) start short-press",pluginname,instance)
@@ -152,13 +160,30 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 			argIndex = 0
 		}
 		audioStreamName, audioStreamSource = getStreamNameAndSource(strArray[argIndex])
-		logm.Infof("%s short-press audioStreamName=%s", pluginname, audioStreamName)
+		logm.Infof("%s (%d) short-press audioStreamName=%s argIndex=%d", pluginname, instance, audioStreamName,argIndex)
 	}
 
-	my_argIndex := argIndex
+	if waitingForOlderInstanceToStop {
+		// an older instance of this plugin is already waiting for an even older instance to stop
+		// we likely have too many overlapping actioncall() instances: giving up on this new instance
+		logm.Debugf("%s (%d) exit on waitingForOlderInstanceToStop",pluginname,instance)
+
+		// this won't update quickly enough
+		//infostring := fmt.Sprintf("%s %d/%d",audioStreamName,argIndex+1,len(strArray))
+		//ph.PrintInfo(infostring)
+
+		// we updated audioStreamName + audioStreamSource and this is all we need to do - exit
+		lock_Mutex.Unlock()
+		return
+	}
+
+
+
 
 	if *ph.StopAudioPlayerChan!=nil {
+		// an instance of our player is currently active
 		waitingForOlderInstanceToStop = true
+		lock_Mutex.Unlock()
 		logm.Debugf("%s (%d) stopping other instance...",pluginname,instance)
 		*ph.StopAudioPlayerChan <- true
 		time.Sleep(200 * time.Millisecond)
@@ -166,9 +191,10 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 		// No instance of our player is currently active. There may be some other audio playing instance.
 		// Stop whatever audio player may currently be active.
 		waitingForOlderInstanceToStop = true
+		lock_Mutex.Unlock()
 		logm.Debugf("%s (%d) on start no audio Plugin active -> StopCurrentAudioPlayback()",pluginname,instance)
-		ph.StopCurrentAudioPlayback()
-		time.Sleep(200 * time.Millisecond)
+		ph.StopCurrentAudioPlayback()		// calling tools.Stop_current_stream()
+		time.Sleep(200 * time.Millisecond)	// not sure this is needed
 	}
 
 	var ourStopAudioPlayerChan chan bool
@@ -178,11 +204,11 @@ func actioncall(longpress bool, strArray []string, pid int, ph tremote_plugin.Pl
 		*ph.StopAudioPlayerChan = ourStopAudioPlayerChan
 	}
 	waitingForOlderInstanceToStop = false
-	lock_Mutex.Unlock()
 
-	ph.PrintInfo(fmt.Sprintf("%s %d/%d",audioStreamName,my_argIndex+1,len(strArray)))
+	infostring := fmt.Sprintf("%s %d/%d",audioStreamName,argIndex+1,len(strArray))
+	logm.Debugf("%s (%d) info: %s",pluginname,instance,infostring)
+	ph.PrintInfo(infostring)
 	startTime := time.Now()
-
 	logm.Infof("%s play stream [%s]", pluginname, audioStreamSource)
 	cmd := AudioPlayer + " \"" + audioStreamSource + "\""
 	logm.Debugf("%s exec cmd [%s]", pluginname, cmd)
